@@ -37,4 +37,13 @@ from country a inner join countrylanguage b
 on a.Code = b.countrycode 
 where a.name like 's%' and b.Percentage > 50;
 
+-- 각 나라별 도시의 개수와 총 인구수를 출력(나라명, 도시 개수, 인구수)
+-- 총 인구수가 2000만 이상인 나라만 출력
+select b.name, count(a.ID) cnt, sum(a.population) total
+from city a, country b
+where a.countrycode = b.code
+group by a.countrycode
+having total >= 20000000
+order by b.name;
 
+show index from city;
