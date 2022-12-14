@@ -60,6 +60,146 @@ call sp_t1_update('test6', 'zzzzz');
 call sp_t1_update('test7', 'qqqqq');
 select * from t1;
 
+-- t1 테이블의 레코드를 하나 삭제하는 sp_t1_delete 프로시저 생성
+drop procedure if exists sp_t1_delete;
+delimiter $$
+create procedure sp_t1_delete(ic2 varchar(20))
+begin
+	delete from t1 where c2 = ic2;
+end $$
+delimiter ;
+call sp_t1_delete('test8');
+select * from t1;
+
+-- sp_t1_insert와 sp_t1_update, sp_t1_delete를 합친 sp_t1_manage 라는 프로시저 작성
+-- 구분자를 따로 받아 구분자로 입력, 수정, 삭제를 구분하여 작업
+drop procedure if exists sp_t1_manage;
+delimiter $$
+create procedure sp_t1_manage(
+-- 매개변수를 뭘 받아오지?
+	kind char(1), ic2 varchar(20), ic3 char(5)
+    -- 구분자변수			변수1			변수2
+)
+begin
+	if kind = 'i' then		-- insert 이면
+		insert into t1(c2, c3) values (ic2, ic3);
+	elseif kind = 'u' then	-- update 이면
+		update t1 set c3 = ic3 where c2 = ic2;
+    elseif kind = 'd' then	-- delete 이면
+		delete from t1 where c2 = ic2;
+    end if;
+end $$
+delimiter ;
+call sp_t1_manage('i', 'test10', 'abcde');
+call sp_t1_manage('u', 'test10', 'ooooo');
+call sp_t1_manage('d', 'test10', null);
+select * from t1;
+
+-- sp_if_test 프로시저 작성
+-- 점수를 score라는 매개변수로 받아와 학점을 출력하는 프로시저
+-- 학점은 credit이라는 변수를 만들어 저장하고 그 값을 출력
+-- 출력내용 : 점수 ==> ? | 학점 ==> ?
+drop procedure if exists sp_if_test;
+delimiter $$
+create procedure sp_if_test(
+	score int
+)
+begin
+	declare credit char(1);
+    
+	if score >= 90 then
+		set credit = 'A';
+	elseif score >= 80 then
+		set credit = 'B';
+	elseif score >= 70 then
+		set credit = 'C';
+	elseif score >= 60 then
+		set credit = 'D';
+	else
+		set credit = 'F';
+	end if;
+    select concat('점수 ==> ', score), concat('학점 ==> ', credit);
+end $$
+delimiter ;
+call sp_if_test(77);
+
+-- sp_if_test 프로시저를 case를 이용하여 작성 sp_case_test
+drop procedure if exists sp_case_test;
+delimiter $$
+create procedure sp_case_test(
+	score int
+)
+begin
+	declare credit char(1);
+    case
+		when score >= 90 then
+			set credit = 'A';
+		when score >= 80 then
+			set credit = 'B';
+		when score >= 70 then
+			set credit = 'C';
+		when score >= 60 then
+			set credit = 'D';
+		else
+			set credit = 'F';
+    end case;
+    select concat('점수 ==> ', score), concat('학점 ==> ', credit);
+end $$
+delimiter ;
+call sp_case_test(77);
+
+
+-- 1 ~ 100 까지의 합을 출력하는 sp_white_test() 프로시저 생성
+-- 출력 내용 : 1 ~ 100까지의 합 : 5050
+-- 변수는 필요하면 선언하여 사용하고, 선언과 동시에 초기화시켜 사용
+drop procedure if exists sp_white_test;
+delimiter $$
+-- 명령의 종료 표시를 ';'이 아닌 '$$'로 임시 변경한다는 의미
+create procedure sp_white_test()
+begin
+	
+	declare i int default 1;	-- 100까지 루프를 돌릴 때 사용할 변수
+    declare sum int default 0;
+	
+	while(i <= 100) do
+		set sum = sum + i;
+        set i = i + 1;
+    end while;
+    select concat('1 ~ 100까지의 합 : ', sum);
+end $$
+delimiter ;
+call sp_white_test();
+
+-- 1 ~ 100 까지의 합을 출력하는 sp_white_test2() 프로시저 생성
+-- 출력 내용 : 1 ~ 100까지의 합 : 5050
+-- 7의 배수는 더하지 않고, 더한 값이 1000이 넘으면 루프를 빠져나와 출력
+drop procedure if exists sp_white_test2;
+delimiter $$
+create procedure sp_white_test2()
+begin
+	
+	declare i int default 0;	-- 100까지 루프를 돌릴 때 사용할 변수
+    declare sum int default 0;
+	
+	chkLabel : while(i <= 100) do
+		set i = i + 1;
+		if i % 7 = 0 then
+			iterate chkLabel;
+            -- 더이상 실행하지 않고 chkLabel 이 지정된 반복문의 조건으로 이동
+        end if;
+		set sum = sum + i;
+		if sum > 1000 then
+			leave chkLabel;
+            -- 더이상 실행하지 않고 chkLabel 이 지정된 반복문을 빠져나감
+		end if;
+		   
+    end while;
+    select concat('1 ~ 100까지의 합 : ', sum);
+end $$
+delimiter ;
+call sp_white_test2();
+
+
 select mid('abcdefg', 4, 3);
 select replace('abcdefghij', 'cd', 'zz');
 select year(now()), month(now()), day(now());

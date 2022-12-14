@@ -281,3 +281,160 @@ create table t_bbs_qna (
 	bq_isview char(1) default 'y',	 -- 게시 여부
 	constraint fk_bbs_qna_mi_id foreign key (mi_id) references t_member_info(mi_id)
 );
+
+-- 자유게시판
+create table t_bbs_free (	
+	bf_idx int primary key,			 -- 글번호
+	bf_ismem char(1) default	'y', -- 회원여부
+	bf_writervar char(20) not null,	 -- 작성자
+	bf_pwvar char(20),				 -- 비밀번호
+	bf_header varchar(20),			 -- not null 머리말
+	bf_title varchar(100),			 -- not null 제목
+	bf_content text	not null,		 -- 내용
+	bf_reply int default 0,			 -- 댓글 개수
+	bf_read int default	0,			 -- 조회수
+	bf_ip int not null,				 -- IP 주소
+	bf_date datetime default now(),	 -- 작성일
+	bf_isdel char(1) default 'y'	 -- 삭제여부
+);
+
+-- 자유게시판 댓글	
+create table t_bbs_free_reply (
+	bfr_idx	int	primary key auto_increment,	 -- 댓글번호
+	bf_idx int,								 -- fk 게시글 정보
+	bfr_ismem char(1) default 'y',			 -- 회원여부
+	bfr_writer varchar(20) not null,		 -- 작성자
+	bfr_pw varchar(20),						 -- 비밀번호
+	bfr_content varchar(200),				 -- nn 내용
+	bfr_good int default 0,					 -- 좋아요
+	bfr_bad int default	0,					 -- 싫어요  
+	bfr_ip varchar(15) not null,			 -- IP 주소
+	bfr_date datetime default now(),		 -- 작성일
+	bfr_isdel char(1) default 'n',			 -- 삭제여부
+	constraint fk_bbs_free_reply_bf_idx foreign key (bf_idx) references t_bbs_free(bf_idx)
+);
+
+-- 자유게시판 댓글 좋아/싫어	
+create table t_bbs_free_reply_gnb (			
+	frg_idx	int	auto_increment unique,	 -- 일련번호
+	mi_id varchar(20),					 -- pk, fk 회원 ID
+	bfr_idx	int,						 -- pk, fk 댓글번호
+	frg_gnb	char(1) default 'g',		 -- 좋아/싫어
+	frg_ip	varchar(15)	not null,		 -- IP 주소
+	frg_date datetime default now(),	 -- 등록일
+	constraint pk_bbs_free_reply_gnb primary key(mi_id, bfr_idx),
+	constraint fk_bbs_free_reply_gnb_mi_id foreign key (mi_id) references t_member_info(mi_id),
+	constraint fk_bbs_free_reply_gnb_bfr_idx foreign key (bfr_idx) references t_bbs_free_reply(bfr_idx)
+);
+
+-- 자유게시판 댓글 신고
+create table t_bbs_free_reply_112 (			
+	fr1_idx	int	auto_increment unique,	 -- 일련번호
+	mi_id varchar(20),					 -- pk, fk 회원 ID
+	bfr_idx int,						 -- pk, fk 댓글번호
+	fr1_content varchar(200) not null,	 -- 신고사유
+	fr1_ip varchar(15) not null,		 -- IP 주소
+	fr1_date datetime default now(),	 -- 신고일
+	constraint pk_bbs_free_reply_112 primary key(mi_id, bfr_idx),
+	constraint fk_bbs_free_reply_112_mi_id foreign key (mi_id) references t_member_info(mi_id),
+	constraint fk_bbs_free_reply_112_bfr_idx foreign key (bfr_idx) references t_bbs_free_reply(bfr_idx)
+);
+
+-- t_bbs_review : 구매후기
+create table t_bbs_review (			
+	br_idx int unique,					 -- 글번호
+	mi_id varchar(20),					 -- pk, fk 회원 ID
+	oi_id char(12),						 -- pk, fk 주문번호
+	pi_id char(7),						 -- pk, fk 상품 ID
+	ps_idx int,							 -- pk, fk 옵션별 재고ID
+	br_name varchar(100) not null,		 -- 상품명&옵션명
+	br_title varchar(100) not null,		 -- 제목
+	br_content text	not null,			 -- 내용
+	br_reply int default 0,				 -- 댓글 개수
+	br_img varchar(50),					 -- 이미지
+	br_score float default 0,			 -- 평점
+	br_good int default	0,				 -- 좋아요 
+	br_bad int default 0,				 -- 싫어요
+	br_read int default 0,				 -- 조회수
+	br_ip varchar(15) not null,			 -- IP 주소
+	br_date datetime default now(),		 -- 작성일
+	br_isdel char(1) default 'n',		 -- 삭제여부
+	constraint pk_bbs_review primary key(mi_id, oi_id, pi_id, ps_idx),
+	constraint fk_bbs_review_mi_id foreign key (mi_id) references t_member_info(mi_id),
+	constraint fk_bbs_review_oi_id foreign key (oi_id) references t_order_info(oi_id),
+	constraint fk_bbs_review_pi_id foreign key (pi_id) references t_product_info(pi_id),
+	constraint fk_bbs_review_ps_idx foreign key (ps_idx) references t_product_stock(ps_idx)
+);
+
+-- 구매후기 좋아/싫어
+create table t_bbs_review_gnb (
+	brg_idx int	auto_increment unique,	 -- 일련번호
+	mi_id varchar(20),					 -- pk, fk 회원 ID
+	br_idx int,							 -- pk, fk 후기 번호
+	brg_gnb char(1) default 'g',		 -- 좋아/싫어
+	brg_ip varchar(15) not null,		 -- IP 주소
+	brg_date datetime default now(),	 -- 등록일
+	constraint pk_bbs_review_gnb primary key(mi_id, br_idx),
+	constraint fk_bbs_review_gnb_mi_id foreign key (mi_id) references t_member_info(mi_id),
+	constraint fk_bbs_review_gnb_br_idx foreign key (br_idx) references t_bbs_review(br_idx)
+);
+
+-- 구매 후기 댓글			
+create table t_bbs_review_reply (
+	brr_idx	int	auto_increment primary key,	-- 댓글 번호
+	br_idx int,								-- fk 후기 번호
+	mi_id varchar(20),					 	-- fk 회원 ID
+	brr_content varchar(200) not null,	 	-- 내용
+	brr_ip varchar(15) not null,		 	-- IP 주소
+	brr_date datetime default now(),	 	-- 작성일
+	brr_isdel char(1) default 'n',		 	-- 삭제여부
+	constraint fk_bbs_review_reply_br_idx foreign key (br_idx) references t_bbs_review(br_idx),
+	constraint fk_bbs_review_reply_mi_id foreign key (mi_id) references t_member_info(mi_id)
+);
+
+-- t_poll_question : 설문조사 질문	
+create table t_poll_question (		
+	pq_idx int primary key,					 -- 일련번호
+	pq_start datetime,						 -- 설문 시작일
+	pq_end datetime,						 -- 설문 종료일
+	pq_question varchar(200) not null,		 -- 질문내용
+	pq_status char(1) default 'a',			 -- 설문 상태
+	pq_date datetime default now(),			 -- 등록일
+	ai_idx int,								 -- fk 등록 관리자
+	constraint fk_poll_question_ai_idx foreign key (ai_idx) references t_admin_info(ai_idx)
+);
+
+-- t_poll_exam : 설문조사 보기	
+create table t_poll_exam (
+	pe_idx int auto_increment primary key,	 -- 일련번호
+	pq_idx int,								 -- fk 질문번호
+	pe_seq int default 0,					 -- 보기번호 및 순서
+	pe_exam varchar(100) not null,			 -- 보기내용
+	pe_use char(1) default 'y',				 -- 사용여부
+	pe_cnt int default 0,					 -- 선택횟수
+	constraint fk_poll_exam_pq_idx foreign key (pq_idx) references t_poll_question(pq_idx)
+);
+
+-- t_poll_result : 설문조사 결과	
+create table t_poll_result (
+	pr_idx int auto_increment unique,	 -- 일련번호
+	mi_id varchar(20),					 -- pk, fk 회원 ID
+	pq_idx int,							 -- pk, fk 질문 일련번호
+	pe_idx int,							 -- fk 질문 보기번호
+	pr_date datetime default now(),		 -- 참여일
+	constraint pk_poll_result primary key(mi_id, pq_idx),
+	constraint fk_poll_result_mi_id foreign key (mi_id) references t_member_info(mi_id),
+	constraint fk_poll_result_pq_idx foreign key (pq_idx) references t_poll_question(pq_idx),
+	constraint fk_poll_result_pe_idx foreign key (pe_idx) references t_poll_exam(pe_idx)
+);
+
+-- t_schedule_info : 일정관리
+create table t_schedule_info (
+	si_idx int primary key,				 -- 일련번호
+	mi_id varchar(20),					 -- fk 회원 ID
+	si_start datetime not null,			 -- 일정시작일
+	si_end datetime,					 -- 일정종료일
+	si_content varchar(100) not null,	 -- 일정내용
+	si_date datetime default now(),		 -- 등록일
+	constraint fk_schedule_info_mi_id foreign key (mi_id) references t_member_info(mi_id)
+);
