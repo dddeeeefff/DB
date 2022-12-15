@@ -50,7 +50,7 @@ create table t_member_addr(					-- 회원주소록
 	constraint fk_member_addr_mi_id foreign key (mi_id) references t_member_info(mi_id)
 );
 
-insert into t_member_addr(mi_id, ma_name, ma_zip, ma_addr1, ma_addr2, ma_basic)
+insert into t_member_addrbf_writervarbf_writervarbf_writervarbf_writervar(mi_id, ma_name, ma_zip, ma_addr1, ma_addr2, ma_basic)
 value('test1', '집주소', '12345', '서울시 강남구 삼성동', '123-45', 'y');
 insert into t_member_addr(mi_id, ma_name, ma_zip, ma_addr1, ma_addr2, ma_basic)
 value('test1', '회사주소', '12344', '서울시 강남구 서초동', '999-45', 'n');
@@ -286,14 +286,14 @@ create table t_bbs_qna (
 create table t_bbs_free (	
 	bf_idx int primary key,			 -- 글번호
 	bf_ismem char(1) default	'y', -- 회원여부
-	bf_writervar char(20) not null,	 -- 작성자
-	bf_pwvar char(20),				 -- 비밀번호
+	bf_writer char(20) not null,	 -- 작성자
+	bf_pw varchar(20),				 -- 비밀번호
 	bf_header varchar(20),			 -- not null 머리말
 	bf_title varchar(100),			 -- not null 제목
 	bf_content text	not null,		 -- 내용
 	bf_reply int default 0,			 -- 댓글 개수
 	bf_read int default	0,			 -- 조회수
-	bf_ip int not null,				 -- IP 주소
+	bf_ip varchar(15) not null,				 -- IP 주소
 	bf_date datetime default now(),	 -- 작성일
 	bf_isdel char(1) default 'y'	 -- 삭제여부
 );

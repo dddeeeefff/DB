@@ -1,37 +1,5 @@
-use test;
+use mall;
 
-/*
-t1이라는 테이블 생성
-컬럼 : c1, c2, c3, c4
-c1 : 정수를 저장하며 자동증가로 제액조건
-c2 : 최대 20자의 문자열을 저장할 컬럼으로 PK로 지정
-c3 : 무조건 5자의 문자열을 저장할 컬럼으로 지정
-c4 : insert시 오늘 날짜 및 시간을 자동으로 저장할 컬럼으로 지정
-*/
-create table t1(
-	c1 int auto_increment unique,    /* primary key가 따로 존재하는 경우 unique 사용 */
-    c2 varchar(20) primary key,
-    c3 char(5) not null,
-    c4 datetime default now()
-);
-
--- t1테이블의 c2 컬럼 뒤에 c22 최대 20자의 문자열을 저장할 컬럼으로 c22 컬럼(필수입력) 추가
-alter table t1 add c22 varchar(20) not null after c2;
-
--- t1 테이블 삭제
-drop table t1;
-
-insert into t1(c2, c3) values ('test', 'abc');
-insert into t1(c2, c3) values ('test2', 'abcde');
-insert into t1(c2, c3, c4) values ('test4', 123, '2022-12-08 23:59:58');
-select * from t1;
-update t1 set c2 = 'test1' where c2 = 'test';
-update t1 set c3 = 'aaaaa' where c3 = 'abcde';
--- c3의 값이 123인 레코드의 c2컬럼의 값을 'test33'으로 변경하는 update문 작성
-update t1 set c2 = 'test33' where c3 = '123';
-select * from t1; -- select는 테이블 내의 데이터를 가져오는 것
-
--- delete from t1 where c1 = 3;
 
 drop procedure if exists sp_t1_insert;
 delimiter $$
@@ -337,137 +305,96 @@ call sp_member_info_update('b', 'abcd', '', '', '');
 call sp_member_info_update('c', 'abcd', '', '', '');
 select * from t_member_info;
 
-select mid('abcdefg', 4, 3);
-select replace('abcdefghij', 'cd', 'zz');
-select year(now()), month(now()), day(now());
-select left(now(), 10), right(now(), 8);
 
-select count(*) from t1;
-select * from t1;
-select found_rows();
+-- 게시판 관련 프로시저들
+-- 공지사항 관리(입력(i), 수정, 삭제) 프로시저 sp_notice_manage(kind char(1))
+drop procedure if exists sp_notice_manage;
+delimiter $$
+create procedure sp_notice_manage(kind char(1),
+	bnidx int, bnctgr varchar(10), aiidx int, bntitle varchar(100), bncontent text, bnisview char(1)
+)
+begin
+	if kind = 'i' then
+		insert into t_bbs_notice (bn_idx, bn_ctgr, ai_idx, bn_title, bn_content, bn_isview) 
+        values (bnidx, bnctgr, aiidx, bntitle, bncontent, bnisview);
+    else
+		update t_bbs_notice set bn_ctgr = bnctgr, bn_title = bntitle, bn_content = bncontent, bn_isview = bnisview 
+        where bn_idx = bnidx;
+    end if;
+end $$
+delimiter ;
+/*
+call sp_notice_manage('i','1','점검','1','서버오류','5시간 점검','n');
+call sp_notice_manage('','','','','','','');
+call sp_notice_manage('','','','','','','');
+select * from sp_notice_manage;
+select * from t_admin_info;
+*/
 
-select version();
 
--- 회원 정보 테이블 생성 쿼리
-create table t_member_info(
-	mi_id varchar(20) primary key,			 -- 아이디
-	mi_pw varchar(20) not null,				 -- 비밀번호
-	mi_name varchar(20) not null,			 -- 이름
-	mi_gender char(1) not null,				 -- 성별
-	mi_birth char(10) not null,				 -- 생일
-	mi_phone varchar(20) not null unique,	 -- 휴대폰
-	mi_email varchar(50) not null unique,	 -- 이메일
-	mi_point int default 0,					 -- 보유포인트
-	mi_lastlogin datetime,					 -- 최종로그인일자
-	mi_joindate datetime default now(),		 -- 가입일
-	mi_status char(1) default 'a'			 -- 상태
-);
-insert into t_member_info (mi_id, mi_pw, mi_name, mi_gender, mi_birth, mi_phone, mi_email, mi_point) 
-values ('test1', '1234', '홍길동', '남', '1988-05-20', '010-1234-5678', 'hong@test.com', 1000);
-insert into t_member_info (mi_id, mi_pw, mi_name, mi_gender, mi_birth, mi_phone, mi_email, mi_point) 
-values ('test2', '1234', '전우치', '남', '1989-10-02', '010-9876-5432', 'woo@test.com', 1000);
-insert into t_member_info (mi_id, mi_pw, mi_name, mi_gender, mi_birth, mi_phone, mi_email, mi_point) 
-values ('test3', '1234', '임꺽정', '남', '1995-11-02', '010-8888-5555', 'lim@test.com', 1000);
-insert into t_member_info (mi_id, mi_pw, mi_name, mi_gender, mi_birth, mi_phone, mi_email, mi_point) 
-values ('abcd', '1234', '둘리', '남', '1980-01-03', '010-8080-5555', 'dooley@test.com', 1000);
-select * from t_member_info;
+-- QnA 관리(질문등록, 질문수정, 답변등록, 답변평가) 프로시저 sp_qna_manage()
+drop procedure if exists sp_qna_manage;
+delimiter $$
+create procedure sp_qna_manage (kind char(1),
+	bqidx int, miid varchar(20), bqctgr char(1), bqtitle varchar(100), bqcontent text, bqimg1 varchar(50), 
+    bqimg2 varchar(50), bqip varchar(15), bqisanswer char(1), bqaiidx int, bqanswer text, bqsatis char(1), bqisview char(1)
+)
+begin
+	if kind = 'i' then			-- 질문등록일 경우
+		insert into t_bbs_qna(bq_idx, mi_id, bq_ctgr, bq_title, bq_content, bq_img1, bq_img2, bq_ip) 
+        values (bqidx, miid, bqctgr, bqtitle, bqcontent, bqimg1, bqimg2, bqip);
+	elseif kind = 'u' then		-- 질문수정일 경우(답변이 달리기 전에만 가능)
+		update t_bbs_qna set bq_ctgr = bqctgr, bq_title = bqtitle, bq_content = bqcontent, bq_img1 = bq_img1, bq_img2 = bqimg2
+        where bq_idx = bqidx and mi_id = miid;
+    elseif kind = 'a' then						-- 답변등록일 경우
+		update t_bbs_qna set bq_isanswer = bqisanswer, bq_ai_idx = bqaiidx, bq_answer = bqanswer, bq_satis = bqsatis, bq_adate = now(), bq_isview = bqisview
+        where bq_idx = bqidx;
+	else	
+		update t_bbs_qna set bq_satis = bqsatis 
+        where bq_idx = bqidx and mi_id = miid;
+    end if;
+end $$
+delimiter ;
+call sp_qna_manage ('i', 1, 'test1', 'a', '질문입니다.', '내용입니다.', null, null, '127.0.0.1', '', 0, '', '', '');
+call sp_qna_manage ('u', 1, '', 'b', '질문 2', '내용입니다2.', null, null, '', '', 0, '', '', '');
+call sp_qna_manage ('a', 1, '', '', '', '', null, null, '', 'y', 1, '답변입니다.', '', 'y');
+call sp_qna_manage ('s', 1, 'test1', '', '', '', null, null, '', '', 0, '', 'c', '');
+select * from t_bbs_qna;
 
--- 회원 주소록 테이블 생성 쿼리
-create table t_member_addr(					-- 회원주소록
-	ma_idx int	primary key auto_increment, -- 일련번호
-    mi_id varchar(20),						-- 회원 ID
-	ma_name varchar(20) not null,			-- 주소이름
-	ma_phone varchar(13),					-- 휴대폰
-	ma_zip char(5) not null,	  			-- 우편번호
-	ma_addr1 varchar(50) not null, 			-- 주소1
-	ma_addr2 varchar(50) not null, 			-- 주소2
-	ma_basic char(1) default 'y', 			-- 기본주소여부
-	ma_date	datetime default now(), 		-- 등록일
-	constraint fk_member_addr_mi_id foreign key (mi_id) references t_member_info(mi_id)
-);
--- 홍길동의 주소(집, 회사) 두 개 등록
-insert into t_member_addr(mi_id, ma_name, ma_phone, ma_zip, ma_addr1, ma_addr2, ma_basic)
-value('test1', '집주소', null, '12345', '서울시 강남구 삼성동', '123-45', 'y');
-insert into t_member_addr(mi_id, ma_name, ma_phone, ma_zip, ma_addr1, ma_addr2, ma_basic)
-value('test1', '회사주소', null, '12344', '서울시 강남구 서초동', '999-45', 'n');
-insert into t_member_addr(mi_id, ma_name, ma_phone, ma_zip, ma_addr1, ma_addr2, ma_basic)
-value('test2', '집주소', null, '54321', '부산시 연제구 연산동', '222-33', 'y');
-select * from t_member_addr;
 
--- 회원 포인트 사용내역
-create table t_member_point(		
-	mp_idx int primary key auto_increment, -- 일련번호
-	mi_id varchar(20), 					   -- 회원 ID
-	mp_su char(1) default 's', 			   -- 사용/적립
-	mp_point int default 0,				   -- 포인트
-	mp_desc varchar(20) not null, 		   -- 사용/적립 내용
-	mp_detail varchar(20) default '', 	   -- 내역상세
-	mp_date datetime default now(), 	   -- 사용/적립일
-	constraint fk_member_point_mi_id foreign key (mi_id) references t_member_info(mi_id)
-);
--- 네 회원의 가입축하금 지급에 관한 포인트 내역 레코드 insert
-insert into t_member_point(mi_id, mp_su, mp_point, mp_desc) 
-value('test1', 's', '1000', '가입축하금');
-insert into t_member_point(mi_id, mp_su, mp_point, mp_desc) 
-value('test2', 's', '500', '관리자 직권');
-insert into t_member_point(mi_id, mp_su, mp_point, mp_desc) 
-value('test3', 's', '2000', '상품구매');
-insert into t_member_point(mi_id, mp_su, mp_point, mp_desc) 
-value('abcd', 's', '700', '게시글작성');
 
-select * from t_member_point;
+-- 자유게시판 관리(입력, 수정, 삭제) 프로시저 sp_free_manage()
+drop procedure if exists sp_free_manage;
+delimiter $$
+create procedure sp_free_manage(kind char(1),
+bfidx int, bfismem char(1), bfwriter varchar(20), bfpw varchar(20), bfheader varchar(20), bftitle varchar(100), bfcontent text, 
+bfip varchar(15)
+)
+begin
+	if kind = 'i' then
+		insert into t_bbs_free(bf_idx, bf_ismem, bf_writer, bf_pw, bf_header, bf_title, bf_content, bf_ip)
+        values(bfidx, bfismem, bfwriter, bfpw, bfheader, bftitle, bfcontent, bfip);
+    elseif kind = 'u' and bfismem = 'y' then 		-- 회원글이면 
+				update t_bbs_free set bf_header = bfheader, bf_title = bftitle, bf_content = bfcontent
+				where bf_idx = bfidx and bf_writer = bfwriter;
+	elseif kind = 'u' and bfismem = 'n' then		-- 비회원글이면
+				update t_bbs_free set bf_header = bfheader, bf_title = bftitle, bf_content = bfcontent
+				where bf_idx = bfidx and bf_pw = bfpw;
+	elseif kind = 'd' and bfismem = 'y' then		-- 회원글 삭제이면	
+				update t_bbs_free set bf_isdel = 'y'
+                where  bf_idx = bfidx and bf_writer = bfwriter;
+	elseif kind = 'd' and bfismem = 'n' then		-- 비회원글 삭제이면	
+				update t_bbs_free set bf_isdel = 'y'
+				where bf_idx = bfidx and bf_pw = bfpw;
+    end if;
+end $$
+delimiter ;
+call sp_free_manage('i', 1, 'y', 'test1', '', '스포츠', '월드컵 16강 탈락', '짜증나', '127.0.0.1');
+call sp_free_manage('u', 1, 'y', 'test1', '', '스포츠', '월드컵 16강 탈락', '짜증나!!', '127.0.0.1');
+select * from t_bbs_free;
 
--- 회원별 주소 추출 쿼리(id, 회원명, 주소명, 주소1, 주소2 - 기본주소가 위에 있어야 함)
-select a.mi_id, a.mi_name, b.ma_name, b.ma_addr1, b.ma_addr2 
-from t_member_info a, t_member_addr b
-where a.mi_id = b.mi_id
-order by a.mi_id, b.ma_basic desc;
 
--- 회원별 등록된 주소의 개수를 출력(id, 회원명, 주소개수 - 가입일 순)
-select a.mi_id, a.mi_name, count(b.ma_idx) cnt
-from t_member_info a, t_member_addr b
-where a.mi_id = b.mi_id
-group by a.mi_id, a.mi_name
-order by a.mi_joindate;
 
--- 회원별 등록된 주소의 개수를 출력(id, 회원명, 주소개수 - 가입일 순) : 주소가 없는 회원도 출력 outer join?
-select a.mi_id, a.mi_name, concat(count(b.ma_idx), "개") cnt
-from t_member_info a left join t_member_addr b on a.mi_id = b.mi_id
-group by a.mi_id, a.mi_name
-order by a.mi_joindate;
 
-select mi_id, mi_name, mi_point from t_member_info
-union
-select '-', '-', '-'
-union
-select mi_id, mp_point, mp_desc from t_member_point
-union
-select mi_id, ma_name, ma_basic from t_member_addr;
 
--- 주소들 중에서 6대 광역시에 속하는 주소를 출력(우편번호, 주소1)
-select ma_zip, ma_addr1 
-from t_member_addr 
-where left(ma_addr1, 2) in ('대전', '대구', '부산', '광주', '인천', '울산');
 
--- 주소들 중에서 6대 광역시에 속하지 않는 주소를 출력(우편번호, 주소1)
-select ma_zip, ma_addr1 
-from t_member_addr 
-where left(ma_addr1, 2) not in ('대전', '대구', '부산', '광주', '인천', '울산');
-
--- 주소가 있는 회원 출력(아이디, 이름, 주소1) : 서브 쿼리 이용
-select a.mi_id, a.mi_name, b.ma_addr1 
-from t_member_info a, t_member_addr b
-where a.mi_id = b.mi_id and 
-	a.mi_id in (select mi_id from t_member_addr);
-
--- 주소가 없는 회원 출력(아이디, 이름, '주소없음') : 서브 쿼리 이용
-select mi_id, mi_name, '주소 없음'
-from t_member_info
-where mi_id not in (select mi_id from t_member_addr);
-
-show index from t_member_info;
-show index from t_member_addr;
-show index from t_member_point;
-
-create index idx_member_info on t_member_info(mi_name);
-drop index idx_member_info on t_member_info;
