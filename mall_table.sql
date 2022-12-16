@@ -438,3 +438,33 @@ create table t_schedule_info (
 	si_date datetime default now(),		 -- 등록일
 	constraint fk_schedule_info_mi_id foreign key (mi_id) references t_member_info(mi_id)
 );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

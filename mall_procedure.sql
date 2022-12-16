@@ -362,7 +362,6 @@ call sp_qna_manage ('s', 1, 'test1', '', '', '', null, null, '', '', 0, '', 'c',
 select * from t_bbs_qna;
 
 
-
 -- 자유게시판 관리(입력, 수정, 삭제) 프로시저 sp_free_manage()
 drop procedure if exists sp_free_manage;
 delimiter $$
@@ -392,6 +391,83 @@ delimiter ;
 call sp_free_manage('i', 1, 'y', 'test1', '', '스포츠', '월드컵 16강 탈락', '짜증나', '127.0.0.1');
 call sp_free_manage('u', 1, 'y', 'test1', '', '스포츠', '월드컵 16강 탈락', '짜증나!!', '127.0.0.1');
 select * from t_bbs_free;
+
+
+-- 자유게시판 댓글 관리(등록, 삭제) 프로시저 sp_free_reply_manage()
+drop procedure if exists sp_free_reply_manage;
+delimiter $$
+create procedure sp_free_reply_manage(kind char(1),
+	bfridx int, bfidx int, bfrismem char(1), bfrwriter varchar(20), bfrpw varchar(20), bfrcontent varchar(200), 
+    bfrip varchar(15), bfrisdel char(1)
+)
+begin
+	if kind = 'i' then 
+		insert into t_bbs_free_reply(bf_idx, bfr_ismem, bfr_writer, bfr_pw, bfr_content, bfr_ip) 
+        values(bfidx, bfrismem, bfrwriter, bfrpw, bfrcontent, bfrip);
+        
+        update t_bbs_free set bf_reply = bf_reply + 1 where bf_idx = bfidx;
+        -- 원본 게시글의 댓글 개수를 1 증가시키는 쿼리
+        
+	elseif kind = 'a' then				-- 관리자가 삭제할 경우
+		update t_bbs_free_reply set bfr_isdel = 'a' where bfr_idx = bfridx;
+        
+        update t_bbs_free set bf_reply = bf_reply - 1 where bf_idx = bfidx and bf_reply > 0;
+        -- 원본 게시글의 댓글 개수를 1 감소시키는 쿼리(음수가 되지 않도록 조건 추가)
+	else								-- 본인이 삭제할 경우
+		begin
+			if bfrismem = 'y' then 		-- 회원이 등록한 댓글일 경우
+				update t_bbs_free_reply set bfr_isdel = 'y'
+                where bfr_idx = bfridx and bfr_writer = bfrwriter;
+            else						-- 비회원이 등록한 댓글일 경우
+				update t_bbs_free_reply set bfr_isdel = 'y'
+                where bfr_idx = bfridx and bfr_pw = bfrpw;
+            end if;
+			update t_bbs_free set bf_reply = bf_reply - 1 where bf_idx = bfidx and bf_reply > 0;
+	        -- 원본 게시글의 댓글 개수를 1 감소시키는 쿼리(음수가 되지 않도록 조건 추가)
+        end;
+	end if;
+end $$
+delimiter ;
+call sp_free_reply_manage('i',0, 1, 'y', 'test2', '', '댓글입니다', '127.0.0.1', 'n');
+call sp_free_reply_manage('i',0, 1, 'n', 'ㅇㅇ', '1111', '댓글2', '127.0.0.1', 'n');
+call sp_free_reply_manage('y',7, 1, 'y', 'test2', '', '', '', 'y');
+select * from t_bbs_free_reply;
+delete from t_bbs_free_reply;
+
+
+
+-- 주문처리 프로시저 sp_order_insert()
+-- insert : t_order_info, t_order_detail
+-- update : t_product_info, t_product_stock, t_member_info, t_member_point
+-- delete : t_order_cart
+/*
+drop procedure if exists sp_order_insert;
+delimiter $$
+create procedure sp_order_insert(
+oiid char(12), miid varchar(20), oiname varchar(20), oiphone varchar(13), oizip char(5), oiaddr1 varchar(50),oiaddr2 varchar(50), 
+oimemo varchar(50), oipayment char(1), oipay int, oiupoint int, oispoint int, oiinvoice varchar(50), oistatus char(1)
+)
+begin
+	insert into t_order_info (
+    oi_id, oi_name, oi_name, oi_phone, oi_zip, oi_addr1, oi_addr2, oi_memo, oi_payment, oi_pay, oi_upoint, oi_spoint, oi_invoice, oi_status
+    )
+    values(
+    oiid, oiname, oiname, oiphone, oizip, oiaddr1, oiaddr2, oimemo, oipayment, oipay, oiupoint, oispoint, oiinvoice, oistatus
+    );
+end $$
+delimiter ;
+*/
+
+
+
+
+
+
+
+
+
+
+
 
 
 

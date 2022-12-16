@@ -471,3 +471,202 @@ show index from t_member_point;
 
 create index idx_member_info on t_member_info(mi_name);
 drop index idx_member_info on t_member_info;
+
+
+set global log_bin_trust_function_creators = 1;
+
+-- 두 개의 정수를 받아 더한 후 리턴하는 함수 fn_add() 작성
+drop function if exists fn_add;
+delimiter $$
+create function fn_add(num1 int, num2 int) returns int
+begin
+	declare sum int;
+	set sum = num1 + num2;
+	return sum;
+end $$
+delimiter ;
+select fn_add(1, mi_point) from t_member_info;
+
+
+-- 두 개의 정수를 받아 첫번째 정수를 두번째 정수로 나눈 후 소수 2자리로 리턴 fn_div()
+drop function if exists fn_div;
+delimiter $$
+create function fn_div(num1 int, num2 int) returns float
+begin
+	declare result float;
+	set result = truncate(num1 / num2, 2);
+	return result;
+end $$
+delimiter ;
+select fn_div(10, 3);
+
+
+-- 회원 ID를 입력받아 해당 회원의 나이를 계산하여 리턴 fn_age()
+drop function if exists fn_age;
+delimiter $$
+create function fn_age(miid varchar(20)) returns int
+begin
+	declare age int;				-- 나이를 저장할 변수
+    -- ㅁㅁ mi_birth를 어떻게 뽑아오지?	--> select로 가져온다 ㅁㅁ
+    declare nYear int;	-- 현재 연도를 저장할 변수
+    declare bYear int;	-- 태어난 연도를 저장할 변수
+    
+    set nYear =  year(now());		-- 오늘 날짜에서 연도부분만 추출하여 저장
+    select left(mi_birth, 4) into bYear from t_member_info where mi_id = miid;
+    -- 받아온 회원ID에 해당하는 생일에서 태어난 연도 부분을 추출하여 bYear에 저장
+    set age = nYear - bYear;
+	return age;
+end $$
+delimiter ;
+select fn_age('test1');
+select * from t_member_info;
+
+
+-- 모든 회원들의 정보 출력(ID, 이름, 생일, ??살, 상태-정상회원, 탈퇴회원, 휴면계정)
+drop function if exists fn_mem;
+delimiter $$
+create function fn_mem(mistatus char(1)) returns varchar(10)
+begin
+	declare mem varchar(10);
+    if mistatus = 'a' then
+		set mem = '정상회원';
+	elseif mistatus = 'b' then
+		set mem = '휴면회원';
+	elseif mistatus = 'c' then
+		set mem = '탈퇴회원';
+	end if;
+	return mem;
+end $$
+delimiter ;
+select mi_id, mi_name, mi_birth, concat(fn_age(mi_id), '살'), fn_mem(mi_status) from t_member_info;
+select mi_id, mi_name, mi_birth, concat(fn_age(mi_id), '살'), if(mi_status = 'a', '정상회원', 
+if(mi_status = 'b', '휴면회원', '탈퇴회원')) from t_member_info;
+
+
+-- 상품ID를 받아 해당 상품이 할인율이 있으면 할인가를 없으면 정상가를 리턴 fn_price()
+drop function if exists fn_price;
+delimiter $$
+create function fn_price(piid char(7)) returns int
+begin
+	declare price int;		-- 가격을 저장할 변수
+    declare dc int;			-- 할인율을 저장할 변수
+    select pi_price into price from t_product_info where pi_id = piid;
+    select pi_dc into dc from t_product_info where pi_id = piid;
+	
+	return price - price * (dc / 100);
+end $$
+delimiter ;
+select fn_price('AA02102');
+select pi_price, concat(pi_dc, '%'), fn_price(pi_id) from t_product_info;
+
+select pi_price, concat(pi_dc, '%'), ceil(pi_price - pi_price * (pi_dc / 100)) from t_product_info;
+-- select pi_price, concat(pi_dc, '%'), if(pi_dc = 0, pi_price, ceil(pi_price - pi_price * (pi_dc / 100))) from t_product_info;
+select * from t_product_info;
+
+
+-- 트리거 사용 예제
+create table test_tr (
+	tt_c1 int auto_increment primary key,
+    tt_c2 varchar(10) not null,
+    tt_c3 varchar(10) default '',
+    tt_c4 datetime default now()
+);
+insert into test_tr(tt_c2, tt_c3) values ('a','b');
+
+create table test_tr2 (
+	tt2_c1 int auto_increment primary key,
+    tt2_c2 varchar(10) not null,
+    tt2_c3 varchar(10) default '',
+    tt2_c4 datetime default now()
+);
+
+-- test_tr 테이블에 update가 일어나면  test_tr2 테이블에 tt2_c2 컬럼의 값이 'aaa'인 레코드를 삽입하는
+-- 트리거 tr_test 생성
+drop trigger if exists tr_test;
+delimiter $$
+create trigger tr_test after update on test_tr for each row
+begin
+	insert into test_tr2 (tt2_c2) values ('aaa');
+end $$
+delimiter ;
+select * from test_tr;
+update test_tr set tt_c2 = 'a', tt_c3 = 'z' where tt_c1 = 1;
+select * from test_tr2;
+
+
+-- test_tr 테이블에 update가 일어나면 tt_c2와 tt_c3의 값들을
+-- test_tr2 테이블의 tt2_c2, tt2_c3 컬럼에 저장하는 트리거 tr_test2 생성
+drop trigger if exists tr_test2;
+delimiter $$
+create trigger tr_test2 after update on test_tr for each row
+begin
+	declare c2 varchar(10);
+    declare c3 varchar(10);
+    set c2 = old.tt_c2;
+    set c3 = old.tt_c3;
+	insert into test_tr2 (tt2_c2, tt2_c3) values (c2, c3);
+end $$
+delimiter ;
+
+select * from test_tr;
+update test_tr set tt_c2 = 'w', tt_c3 = 'v' where tt_c1 = 1;
+select * from test_tr2;
+
+
+
+
+
+
+-- 상품 가격 테이블
+create table test_pdt(
+	tp_id char(6) primary key,
+    tp_name varchar(10) not null,
+    tp_price int default 0
+);
+insert into test_pdt values('aa0101', '좋은 상품', 150000);
+insert into test_pdt values('aa0102', '나쁜 상품', 180000);
+insert into test_pdt values('aa0103', '보통 상품', 120000);
+select * from test_pdt;
+
+
+-- 상품 가격 변동 히스토리 테이블
+create table test_pdt_history(
+	tph_idx int auto_increment primary key, -- 일련번호
+	tp_id char(6), -- 상품ID
+	tph_old int default 0, -- 이전 가격
+	tph_new int default 0, -- 변경 가격
+	tph_date datetime default now(), -- 변경 일시	
+    constraint fk_pdt_history_tp_id foreign key(tp_id) references test_pdt(tp_id)
+);
+
+-- 상품테이블에서 가격 변동시 변경전 가격과 변경후 가격을 history 테이블에 저장
+drop trigger if exists tr_price;
+delimiter $$
+create trigger tr_price after update on test_pdt for each row
+begin
+    declare old_price, new_price int;
+    declare tpid char(6);
+    
+    set old_price = old.tp_price;	-- update전 상품가격
+    set new_price = new.tp_price;	-- update후 상품가격
+	set tpid = old.tp_id;			-- update되는 상품 id
+    if old_price != new_price then	-- update로 가격이 변동될 경우 / 다르다 '<>'도 가능
+		insert into test_pdt_history (tp_id, tph_old, tph_new) values (tpid, old_price, new_price);
+	end if;
+end $$
+delimiter ;
+select * from test_pdt;
+update test_pdt set tp_price = 130000 where tp_id = 'aa0101';
+update test_pdt set tp_price = 150000 where tp_id = 'aa0102';
+update test_pdt set tp_price = 130000 where tp_id = 'aa0103';
+select * from test_pdt_history;
+
+
+
+
+
+
+
+
+
+
