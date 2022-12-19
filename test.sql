@@ -662,8 +662,197 @@ update test_pdt set tp_price = 130000 where tp_id = 'aa0103';
 select * from test_pdt_history;
 
 
+create view v_first as select * from t_member_info;
+select * from v_first;
 
 
+-- 구매목록 뷰 생성(회면ID, 주문번호, 주문일자, 상품ID, 상품명, 개수, 옵션 표시)
+
+create view v_order_list as select a.mi_id, a.oi_id, a.oi_date, b.pi_id, b.od_name, b.od_cnt, b.od_size
+	from t_order_info a, t_order_detail b
+	where a.oi_id = b.oi_id;
+
+select * from v_order_list where mi_id = 'test1';
+
+
+-- 구매목록2 뷰 생성
+-- 회원ID, 회원명, 주문번호, 주문일자, 상품ID, 소분류명, 상품명, 개수, 옵션
+
+
+create view v_order_list2 as select a.mi_id, a.mi_name, b.oi_id, b.oi_date, d.pi_id, e.pcs_name, d.pi_name, c.od_cnt, c.od_size
+	from t_member_info a, t_order_info b, t_order_detail c, t_product_info d, t_product_ctgr_small e
+	where a.mi_id = b.mi_id and b.oi_id = c.oi_id and c.pi_id = d.pi_id and d.pcs_id = e.pcs_id;
+
+select * from v_order_list2;
+
+
+-- 회원 기본 정보 목록(id, 이름, 전화, 기본주소) v_member_info
+create view v_member_info as select a.mi_id, a.mi_name, a.mi_phone, b.ma_zip, b.ma_addr1, b.ma_addr2 
+	from t_member_info a, t_member_addr b 
+	where a.mi_id = b.mi_id and b.ma_basic = 'y';
+
+select * from v_member_info;
+
+
+-- 회원별 구매액 목록(id, 이름, 총 구매액, 주문횟수) : v_member_order_list
+create view v_member_order_list as select a.mi_id, a.mi_name, sum(b.oi_pay) total, count(b.oi_id) cnt
+	from t_member_info a, t_order_info b
+	where a.mi_id = b.mi_id
+	group by a.mi_id, a.mi_name;
+
+select * from v_member_order_list;
+
+
+-- 위의 쿼리를 참조하여 구매를 하지 않은 회원들도 보여주는 뷰 : v_member_order_list2
+create view v_member_order_list2 as select a.mi_id, a.mi_name, ifnull(sum(b.oi_pay), 0) total, count(b.oi_id) cnt 
+	from t_member_info a left join t_order_info b 
+	on a.mi_id = b.mi_id
+	group by a.mi_id, a.mi_name;
+
+select * from v_member_order_list2;
+
+
+-- 연도 및 월별 회원 가입자 수 목록(연도, 월, 가입자 수) : v_member_monthly
+create view v_member_monthly as select year(mi_joindate) 연도, month(mi_joindate) 월, count(mi_id) 가입자수
+	from t_member_info
+	group by year(mi_joindate), month(mi_joindate);
+
+select * from v_member_monthly;
+
+
+-- 커서
+create table test_cursor(
+	c1 int auto_increment primary key,
+    c2 int default 0,
+    c3 varchar(20)
+);
+insert into test_cursor (c2, c3) values (11, 'test1');
+insert into test_cursor (c2, c3) values (22, 'test2');
+insert into test_cursor (c2, c3) values (33, 'test3');
+select * from test_cursor;
+
+-- test_cursor 테이블의 c2 컬럼의 값을 c1 과 더한 값으로 변경하는 프로시저
+-- cursor를 이용하여 작업 : sp_cursor_test
+delimiter $$
+create procedure sp_cursor_test()
+begin
+	declare cid int default 0;	-- 커서에 들어있는 c1 컬럼의 값을 저장할 변수
+	declare is_end boolean default false;	-- 커서가 끝까지 루프를 돌았는지 판단할 변수
+	-- 커서의 값들을 받을 변수들을 선언해 놓아야 함
+	declare cs cursor for select c1 from test_cursor;	-- 지정한 select문으로 커서 생성
+	-- test_cursor 테이블에서 c1컬럼을 모두 추출하여 cs라는 커서를 생성
+    
+	declare continue handler for not found set is_end = true;
+	open cs;
+	cursorLoop:while true do
+		fetch cs into cid;	-- cs 커서의 c1 컬럼의 값을 cid 변수에 저장
+		if is_end then
+			leave cursorLoop;
+		end if;
+		update test_cursor set c2 = c2 + cid where c1 = cid;
+	end while;
+	close cs;
+end $$
+delimiter ;
+call sp_cursor_test();
+
+
+-- c1 컬럼의 값이 홀수이면 c2 컬럼의 값을 5감소, 짝수이면 5증가시키는 프로시저 : sp_cursor_test2
+delimiter $$
+create procedure sp_cursor_test2()
+begin
+	declare val int default 0;
+	declare cid int default 0;
+	declare is_end boolean default false;
+	declare cs cursor for  select c1 from test_cursor;
+    
+	declare continue handler for not found set is_end = true;
+	open cs;
+	cursorLoop:while true do	
+		fetch cs into cid;
+		if is_end then
+			leave cursorLoop;
+		end if;
+		if cid % 2 = 0 then
+			set val = 5;
+		else
+			set val = -5;
+		end if;
+        update test_cursor set c2 = c2 + val where c1 = cid;
+	end while;
+	close cs;
+end $$
+delimiter ;
+call sp_cursor_test2();
+select * from test_cursor;
+
+
+-- test_cursor 테이블의 모든 데이터를 받아와 c1이나 c2의 값이 10의 배수이면
+-- c1, c2의 값들로 c2, c3에 값을 넣어 insert를 하고, c1과 c2가 모두 홀수이면
+-- 해당 레코드의 c2 값을 0으로 변경 : sp_cursor_test3
+delimiter $$
+create procedure sp_cursor_test3()
+begin
+	declare vc1 int default 0;
+    declare vc2 int default 0;
+    declare vc3 varchar(20) default '';
+	declare is_end boolean default false;
+	declare cs cursor for  select * from test_cursor;
+    
+	declare continue handler for not found set is_end = true;
+	open cs;
+	cursorLoop:while true do	
+		fetch cs into vc1, vc2, vc3;
+		if is_end then
+			leave cursorLoop;
+		end if;
+        
+        if vc1 % 10 = 0 or vc2 % 10 = 0 then
+			insert into test_cursor (c2, c3) values (vc1, vc2);
+		elseif vc1 % 2 = 1 and vc2 % 2 = 1 then
+			update test_cursor set c2 = 0 where c1 = vc1;
+		end if;
+	end while;
+	close cs;
+end $$
+delimiter ;
+call sp_cursor_test3();
+select * from test_cursor;
+
+
+-- 트렌잭션 예제
+delimiter $$
+create procedure sp_transaction(kind char(1),
+vc2 int, vc3 varchar(20), t1c2 varchar(20), t1c3 char(5))
+begin
+	declare err int default 0;	-- 오류 여부를 저장할 변수
+    declare continue handler for sqlexception set err = 1;
+    -- 쿼리 작업시 오류가 발생하면 err 변수의 값에 1을 저장
+    start transaction;	-- 트랜잭션 시작
+    
+    if kind = 'e' then	-- 롤백 테스트용 쿼리 작업
+    begin
+		insert into test_cursor (c2, c3) values (vc2, vc3);
+        insert into t1 (c1, c2, c3) values (vc3, t1c2, t1c3);
+    end;
+    else				-- 커밋 테스트용 쿼리 작업
+    begin
+		insert into test_cursor (c2, c3) values (vc2, vc3);
+        insert into t1 (c2, c3) values (t1c2, t1c3);
+    end;
+    end if;
+    
+    if err = 0 then		-- 트랜젝션내의 쿼리 실행시 오류가 발생하지 않았으면
+		commit;			-- 쿼리의 실행 결과들을 해당 테이블에 적용
+	else				-- 트랜젝션내의 쿼리 실행시 오류가 발생했으면
+		rollback;		-- 모든 쿼리의 실행을 처음으로 되돌림
+	end if;
+end $$
+delimiter ;
+call sp_transaction('i', 7, 'cursor', 't1', 'aaaaa');
+call sp_transaction('e', 9, 'cursor2', 't12', 'bbbbb');
+select * from test_cursor;
+select * from t1;
 
 
 

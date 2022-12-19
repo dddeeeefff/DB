@@ -458,6 +458,27 @@ end $$
 delimiter ;
 */
 
+-- 상품별 판매량 및 판매액 목록 : v_product_sale_list
+-- 상품ID, 상품명, 판매량, 판매액, 주문횟수
+create view v_product_sale_list as select a.pi_id, a.pi_name, sum(b.od_cnt) salecnt, 
+	sum(b.od_cnt * b.od_price) total, count(b.oi_id) ordercnt
+from t_product_info a, t_order_detail b
+where a.pi_id = b.pi_id
+group by pi_id, pi_name;
+
+select * from v_product_sale_list;
+
+
+-- 일별 판매액과 주문건 목록 : v_order_monthly
+-- 연도, 월, 일, 판매액, 주문건수
+create view v_order_monthly as select year(oi_date) sYear, month(oi_date) sMonth, 
+day(oi_date) sDay, sum(oi_pay) total, count(oi_id) ordercnt
+from t_order_info 
+group by sYear, sMonth, sDay;
+
+select * from v_order_monthly;
+
+
 
 
 

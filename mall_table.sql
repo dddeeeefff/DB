@@ -439,7 +439,12 @@ create table t_schedule_info (
 	constraint fk_schedule_info_mi_id foreign key (mi_id) references t_member_info(mi_id)
 );
 
-
+create table t1(
+	c1 int auto_increment unique,    /* primary key가 따로 존재하는 경우 unique 사용 */
+    c2 varchar(20) primary key,
+    c3 char(5) not null,
+    c4 datetime default now()
+);
 
 
 
