@@ -854,8 +854,9 @@ call sp_transaction('e', 9, 'cursor2', 't12', 'bbbbb');
 select * from test_cursor;
 select * from t1;
 
+use test;
 
 
 
-
+ 
 

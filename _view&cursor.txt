@@ -59,3 +59,16 @@ end $$
 delimiter ;
 
  - 커서의 사용빈도는 웹에서는 상당히 낮은 편임
+
+
+백업(backup)
+ - DB정보 및 데이터들을 다른 저장매체에 저장해 놓는 것
+
+1. 백업
+1) Workbench 왼쪽 화면의 [Navigator]에서 [administration]탭(Management)을 클릭한 후 [Data Export]를 클릭하면 화면 오른쪽에 창이 열림
+2) Data Export 창의 좌상단에서 백업을 원하는 DB 선택 체크 및 선택 후 우상단 화면에서 백업이 필요없는 테이블이나 뷰는 선택 해제
+3) Data Export 창의 중간에 있는 Objects to Export 영역의 체크박스 세 개를 모두 체크함
+ - 스토어드 프로시저나 함수, 트리거 등의 객체들도 백업받겠다는 의미
+4) Data Export 창의 하단에 있는 Export Options 영역에서 아랫쪽의 'Export to Self-Contained File' 라디오 버튼 선택 후 '...'을 눌러 준비해 놓은 백업 파일 저장위치와 파일명을 입력
+ - 아랫쪽의 'Create Dump in a Single Transaction(Self-Contained file only)'를 선택하고, 'Include Create Schema'는 선택하지 않음
+5) Data Export 창의 우측 최하단의 [Start Export] 버튼을 눌러 백업 받기 
