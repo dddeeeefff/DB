@@ -46,4 +46,8 @@
  2) 이클립스 화면 하단의 [Servers] 탭 클릭 -> 링크가 걸린 'No servers are available. Click this link to create a new server...'를 클릭하여 대화상자를 띄음 -> 대화상자에서 1) 메뉴에서 추가한 서버를 선택한 후 [Next]할 필요없이 [Finish]
 
 
+4-2. 이클립스에서 인코딩 변경
+ - 메뉴 표시줄 [Window] -> [Preferences] -> 왼쪽 탭에서 [Web]의 하위메뉴들 중 [CSS Files], [HTML Files], [JSP Files], 메뉴들에서 각각 Encoding을 'Korea, Euc-KR'에서 최상단의 'UTF_8'로 변경 후 [Apply and close]
+
+ - 메뉴 표시줄 [Window] -> [Preferences] -> 왼쪽 탭에서 [General]의 하위메뉴들 중 [Appearance]의 하위메뉴 [Colors and Fonts] 메뉴에서 'Basic'의 하위메뉴인 'Text Font'에서 글꼴 및 크기 등을 변경할 수 있음
 
